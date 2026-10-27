@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laboratório Virtual — Calor, Convecção e Irradiação</title>
+<style>
+:root{color-scheme:dark;--bg:#071321;--panel:#112238;--border:#34516f;--text:#f3f8ff;--muted:#b8c9dc;--gold:#ffd166}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(145deg,#071321,#102641);color:var(--text);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+main{max-width:1120px;margin:auto;padding:18px}header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}h1{font-size:clamp(1.4rem,3vw,2.1rem);margin:0}.sub,.muted,.note{color:var(--muted);font-size:.9rem}.badge{padding:5px 10px;border-radius:20px;background:#34465b;font-size:.82rem}
+.panels{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}.panel{padding:13px;border:1px solid var(--border);border-radius:14px;background:rgba(15,35,57,.95)}.temp{font-size:1.9rem;font-weight:800}.panel label,.control label{display:block;color:var(--muted);font-size:.88rem;margin-top:8px}input[type=range]{width:100%;accent-color:var(--gold);margin:8px 0 2px}
+canvas{display:block;width:100%;height:auto;border:1px solid #365878;border-radius:14px;background:#081421;touch-action:none}.legend{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0;color:var(--muted);font-size:.85rem}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px}
+.controlgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0}.control{padding:12px;border:1px solid var(--border);border-radius:12px;background:#10253b}.control strong{display:block}.buttons{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}.buttons button{font:inherit;font-weight:700;border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:white;background:#173858;cursor:pointer}.buttons button:hover{filter:brightness(1.15)}
+.status{padding:13px;border:1px solid var(--border);border-radius:14px;background:#0d2034}.statusrow{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.readings{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:10px}.reading{background:#132b43;border-radius:10px;padding:10px}.reading strong{font-size:1.1rem}.note{margin-top:12px}.small{font-size:.82rem;color:var(--muted)}
+@media(max-width:700px){main{padding:10px}.panels{gap:7px}.panel{padding:9px}.temp{font-size:1.55rem}.controlgrid{grid-template-columns:1fr}.readings{grid-template-columns:1fr 1fr}.readings .reading:last-child{grid-column:1/-1}}
+</style>
+</head>
+<body><main>
+<header><div><h1>Laboratório virtual: transferência de calor</h1><div class="sub">Condução entre corpos em contato + perdas para o ambiente por convecção e irradiação.</div></div><span class="badge">MODELO DIDÁTICO</span></header>
+<section class="panels">
+<div class="panel" style="border-color:#ff855e"><strong>Corpo A <span style="color:#ff855e">●</span></strong><div class="temp"><span id="ta">80.0</span> °C</div><label for="sa">Temperatura inicial/ajuste do corpo A</label><input id="sa" type="range" min="0" max="100" step="1" value="80"><div class="muted">Partículas e cor mudam com a temperatura</div></div>
+<div class="panel" style="border-color:#57d9d0"><strong>Corpo B <span style="color:#57d9d0">●</span></strong><div class="temp"><span id="tb">20.0</span> °C</div><label for="sb">Temperatura inicial/ajuste do corpo B</label><input id="sb" type="range" min="0" max="100" step="1" value="20"><div class="muted">Arraste os corpos para colocá-los em contato</div></div>
+</section>
+<canvas id="scene" width="1000" height="460" aria-label="Dois corpos com partículas, seta de transferência de calor entre eles e setas de convecção e irradiação para o ambiente"></canvas>
+<div class="legend"><span><i class="dot" style="background:#ff855e"></i>Convecção: troca com o ar</span><span><i class="dot" style="background:#ffd166"></i>Irradiação: ondas térmicas</span><span><i class="dot" style="background:#80e8ff"></i>Contato: calor do quente para o frio</span><span><i class="dot" style="background:#c6dff5"></i>Partículas do ar ambiente (temperatura constante)</span></div>
+<div class="small">Arraste os corpos com mouse ou dedo. As partículas pequenas representam o ar do ambiente e continuam com temperatura constante, mesmo quando trocam energia com os corpos. O fluxo direto entre os corpos só ocorre quando eles se tocam.</div>
+<section class="controlgrid">
+<div class="control"><strong>Ambiente</strong><label for="env">Temperatura ambiente: <b><span id="envv">25</span> °C</b></label><input id="env" type="range" min="0" max="40" value="25"><div class="small">Os corpos tendem à temperatura do ambiente.</div></div>
+<div class="control"><strong>Convecção</strong><label for="conv">Intensidade: <b><span id="convv">média</span></b></label><input id="conv" type="range" min="0" max="3" step="1" value="1"><div class="small">0 = desligada; maior valor = troca mais rápida com o ar.</div></div>
+<div class="control"><strong>Irradiação</strong><label for="rad">Intensidade: <b><span id="radv">média</span></b></label><input id="rad" type="range" min="0" max="3" step="1" value="1"><div class="small">0 = desligada; maior valor = troca radiativa mais intensa.</div></div>
+</section>
+<div class="buttons"><button id="start">▶ Iniciar / continuar</button><button id="pause">Ⅱ Pausar</button><button id="reset">↻ Reiniciar experimento</button><button id="separate">↔ Separar os corpos</button></div>
+<section class="status"><div class="statusrow"><strong>Estado do experimento</strong><span class="badge" id="badge">Pronto para iniciar</span></div><div id="message" style="margin-top:8px">Ajuste as temperaturas e inicie. O ambiente pode aquecer ou resfriar cada corpo; em contato, também há transferência entre eles.</div>
+<div class="readings"><div class="reading"><div class="muted">Temperatura A</div><strong><span id="ra">80.0</span> °C</strong><div class="small" id="da">—</div></div><div class="reading"><div class="muted">Temperatura B</div><strong><span id="rb">20.0</span> °C</strong><div class="small" id="db">—</div></div><div class="reading"><div class="muted">Ambiente</div><strong><span id="re">25</span> °C</strong><div class="small">referência térmica</div></div></div></section>
+<p class="note"><b>Modelo didático simplificado:</b> a convecção é representada por uma taxa proporcional à diferença entre a temperatura do corpo e a do ambiente; a irradiação usa a dependência aproximada da quarta potência da temperatura absoluta (lei de Stefan–Boltzmann). O contato entre corpos é representado por uma troca simplificada. Não é uma simulação de engenharia: dimensões, materiais e coeficientes foram escolhidos para tornar os efeitos visíveis. As partículas são ilustrativas.</p>
+</main>
+<script>
+(()=>{
+const $=id=>document.getElementById(id),c=$('scene'),ctx=c.getContext('2d'),W=c.width,H=c.height,bw=230,bh=250;
+let A={x:65,y:115,t:80,parts:[]},B={x:705,y:115,t:20,parts:[]},drag=null,off={x:0,y:0},running=false,last=0,elapsed=0,anim=0;
+let air=[];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),rand=(a,b)=>a+Math.random()*(b-a);
+air=Array.from({length:180},()=>({x:rand(8,W-8),y:rand(40,H-12),vx:rand(-.7,.7),vy:rand(-.55,.55),r:rand(1.2,2.5),phase:rand(0,Math.PI*2)}));
+function particles(o){o.parts=[];for(let i=0;i<95;i++)o.parts.push({x:rand(12,bw-12),y:rand(48,bh-12),vx:rand(-1.8,1.8),vy:rand(-1.8,1.8),r:rand(2,3.5),trail:[]})}
+particles(A);particles(B);
+function touch(){return A.y<B.y+bh-10&&A.y+bh>B.y+10&&(Math.abs(A.x+bw-B.x)<8||Math.abs(B.x+bw-A.x)<8)}
+function tempColor(t){let p=clamp(t/100,0,1),stops=[[0,[220,35,45]],[.5,[150,55,160]],[1,[35,115,255]]];let lo=stops[0],hi=stops[2];for(let i=0;i<stops.length-1;i++)if(p>=stops[i][0]&&p<=stops[i+1][0]){lo=stops[i];hi=stops[i+1];break}let q=(p-lo[0])/(hi[0]-lo[0]);return `rgb(${lo[1].map((v,i)=>Math.round(v+(hi[1][i]-v)*q)).join(',')})`}
+function sync(){['A','B'].forEach(k=>{$('t'+k.toLowerCase()).textContent=({A,B}[k]).t.toFixed(1);$('r'+k.toLowerCase()).textContent=({A,B}[k]).t.toFixed(1)});$('re').textContent=$('env').value;$('envv').textContent=$('env').value}
+function setStatus(){let ct=touch(),d=A.t-B.t,env=+$('env').value;let s=ct?'Corpos em contato: calor flui do mais quente para o mais frio. ':'Corpos separados: sem troca direta entre eles. ';s+='Convecção e irradiação atuam em cada corpo conforme sua diferença para o ambiente.';$('message').textContent=s;$('badge').textContent=ct?'Contato térmico':'Troca com ambiente';$('badge').style.background=ct?'#80551b':'#34465b'}
+function setStrength(id,out){let v=+$ (id).value;$(out).textContent=['desligada','baixa','média','alta'][v]}
+function updateUI(){sync();setStatus();setStrength('conv','convv');setStrength('rad','radv')}
+$('sa').addEventListener('input',e=>{A.t=+e.target.value;updateUI()});$('sb').addEventListener('input',e=>{B.t=+e.target.value;updateUI()});$('env').addEventListener('input',updateUI);$('conv').addEventListener('input',()=>setStrength('conv','convv'));$('rad').addEventListener('input',()=>setStrength('rad','radv'));
+function pos(e){let r=c.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height}}
+function pick(p){for(let o of [B,A])if(p.x>=o.x&&p.x<=o.x+bw&&p.y>=o.y&&p.y<=o.y+bh)return o;return null}
+c.addEventListener('pointerdown',e=>{let p=pos(e),o=pick(p);if(!o)return;drag=o;off={x:p.x-o.x,y:p.y-o.y};c.setPointerCapture(e.pointerId)});
+c.addEventListener('pointermove',e=>{if(!drag)return;let p=pos(e);drag.x=clamp(p.x-off.x,5,W-bw-5);drag.y=clamp(p.y-off.y,45,H-bh-5);setStatus()});
+function end(){drag=null;setStatus()}c.addEventListener('pointerup',end);c.addEventListener('pointercancel',end);
+$('start').onclick=()=>{running=true;last=0;$('badge').textContent='Simulação em andamento'};$('pause').onclick=()=>{running=false;$('badge').textContent='Pausada'};
+$('reset').onclick=()=>{A.t=+$('sa').value;B.t=+$('sb').value;A.x=65;A.y=115;B.x=705;B.y=115;elapsed=0;running=false;updateUI()};
+$('separate').onclick=()=>{A.x=65;B.x=705;setStatus()};
+function arrow(x1,y1,x2,y2,color,phase,label){let dx=x2-x1,dy=y2-y1,len=Math.hypot(dx,dy)||1,ux=dx/len,uy=dy/len;ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=3;ctx.setLineDash([10,8]);ctx.lineDashOffset=-phase*18;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(x2-ux*13-uy*7,y2-uy*13+ux*7);ctx.lineTo(x2-ux*13+uy*7,y2-uy*13-ux*7);ctx.closePath();ctx.fill();if(label){ctx.font='bold 13px system-ui';ctx.fillText(label,(x1+x2)/2+5,(y1+y2)/2-7)}}
+function drawBody(o,label){let col=tempColor(o.t);ctx.save();ctx.shadowColor=col;ctx.shadowBlur=18;let g=ctx.createLinearGradient(o.x,o.y,o.x+bw,o.y+bh);g.addColorStop(0,col);g.addColorStop(1,'#101d32');ctx.fillStyle=g;ctx.strokeStyle=col;ctx.lineWidth=3;ctx.beginPath();ctx.roundRect(o.x,o.y,bw,bh,16);ctx.fill();ctx.stroke();ctx.restore();ctx.fillStyle='#fff';ctx.font='bold 16px system-ui';ctx.fillText(label,o.x+14,o.y+27);ctx.font='bold 21px system-ui';ctx.fillText(o.t.toFixed(1)+' °C',o.x+14,o.y+52);
+for(let p of o.parts){let speed=(.35+o.t/55);p.x+=p.vx*speed;p.y+=p.vy*speed;if(p.x<8||p.x>bw-8)p.vx*=-1;if(p.y<42||p.y>bh-8)p.vy*=-1;p.x=clamp(p.x,8,bw-8);p.y=clamp(p.y,42,bh-8);p.trail.push({x:p.x,y:p.y});if(p.trail.length>5)p.trail.shift();ctx.strokeStyle='rgba(255,255,255,.25)';ctx.lineWidth=1.4;ctx.beginPath();p.trail.forEach((q,i)=>i?ctx.lineTo(o.x+q.x,o.y+q.y):ctx.moveTo(o.x+q.x,o.y+q.y));ctx.stroke();ctx.fillStyle='rgba(255,255,255,.92)';ctx.beginPath();ctx.arc(o.x+p.x,o.y+p.y,p.r,0,Math.PI*2);ctx.fill()}
+}
+function draw(){ctx.clearRect(0,0,W,H);
+ // Ar ambiente: partículas com agitação visual constante; sua temperatura é definida pelo controle ambiente
+ // e não muda quando os corpos trocam energia.
+ const envTemp=+$('env').value;
+ for(const p of air){
+   p.x+=p.vx; p.y+=p.vy;
+   if(p.x<5||p.x>W-5)p.vx*=-1;
+   if(p.y<38||p.y>H-5)p.vy*=-1;
+   p.x=clamp(p.x,5,W-5);p.y=clamp(p.y,38,H-5);
+   const pulse=.5+.5*Math.sin(anim*2+p.phase);
+   ctx.fillStyle=envTemp<15?`rgba(125,210,255,${.35+.4*pulse})`:envTemp>30?`rgba(255,190,120,${.35+.4*pulse})`:`rgba(190,220,245,${.35+.4*pulse})`;
+   ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();
+   if(pulse>.82){ctx.strokeStyle='rgba(190,220,245,.15)';ctx.beginPath();ctx.moveTo(p.x-p.vx*5,p.y-p.vy*5);ctx.lineTo(p.x,p.y);ctx.stroke();}
+ }
+ ctx.fillStyle='#b8c9dc';ctx.font='14px system-ui';ctx.fillText('AR AMBIENTE: '+envTemp+' °C (temperatura constante)',20,25);
+ drawBody(A,'CORPO A');drawBody(B,'CORPO B');
+let env=+$('env').value,ct=touch(),mid=anim%1;
+for(let o of [A,B]){let diff=o.t-env;if(Math.abs(diff)>.8){let dir=diff>0?1:-1, col=diff>0?'#ff855e':'#8ad9ff';let x=o.x+bw/2,y=o.y-18;if(+$('conv').value>0){for(let i=0;i<3;i++){let yy=o.y+bh*.35+i*45;arrow(x,yy,x,yy-dir*34,col,anim+i*.3,'');}ctx.fillStyle=col;ctx.font='12px system-ui';ctx.fillText('CONVECÇÃO',o.x+10,o.y+bh+19)}
+if(+$('rad').value>0){for(let i=0;i<3;i++){let xx=o.x+35+i*78;let yy=o.y+bh+24;ctx.strokeStyle='#ffd166';ctx.lineWidth=2;ctx.beginPath();for(let j=0;j<=30;j++){let px=xx+j*1.1,py=yy+Math.sin(j*.65+anim*6+i)*5; if(j===0)ctx.moveTo(px,py);else ctx.lineTo(px,py)}ctx.stroke();}ctx.fillStyle='#ffd166';ctx.font='12px system-ui';ctx.fillText('IRRADIAÇÃO',o.x+10,o.y+bh+43)}}
+}
+if(ct&&Math.abs(A.t-B.t)>.15){let hot=A.t>B.t?A:B,cold=hot===A?B:A;let x1=hot.x+bw/2,y1=hot.y+bh/2,x2=cold.x+bw/2,y2=cold.y+bh/2;arrow(x1,y1,x2,y2,'#80e8ff',anim,'CALOR');}
+if(!running){ctx.fillStyle='rgba(5,12,22,.65)';ctx.fillRect(0,H-34,W,34);ctx.fillStyle='#dbe9f7';ctx.font='13px system-ui';ctx.fillText('Clique em “Iniciar / continuar” para observar a evolução das temperaturas.',15,H-13)}
+}
+function step(ts){if(!last)last=ts;let dt=Math.min((ts-last)/1000,.05);last=ts;anim+=dt*1.4;
+if(running){elapsed+=dt;let env=+$('env').value,cv=+$('conv').value,rv=+$('rad').value,ct=touch();
+// rates are intentionally amplified for visibility; use Celsius for convection and Kelvin for radiation.
+for(let o of [A,B]){let d=env-o.t;o.t+=d*(0.0015*cv)*dt*60;let tk=o.t+273.15,te=env+273.15;let radDelta=(te**4-tk**4)/Math.max(273.15**4,1);o.t+=radDelta*(0.008*rv)*dt*60;}
+// Contact exchange: heat moves from hotter to colder; equal capacities are assumed.
+if(ct){let delta=A.t-B.t,transfer=delta*.0018*dt*60;A.t-=transfer;B.t+=transfer}
+A.t=clamp(A.t,0,100);B.t=clamp(B.t,0,100);$('sa').value=A.t;$('sb').value=B.t;sync();setStatus();$('da').textContent=A.t>env?'perde para o ambiente':A.t<env?'recebe do ambiente':'em equilíbrio com ambiente';$('db').textContent=B.t>env?'perde para o ambiente':B.t<env?'recebe do ambiente':'em equilíbrio com ambiente';}
+draw();requestAnimationFrame(step)}
+updateUI();requestAnimationFrame(step);
+})();
+</script></body></html>
